@@ -1,0 +1,5 @@
+# Ignore Backend build artifacts
+Backend/**/bin/
+Backend/**/obj/
+Backend/**/*.bin
+Backend/**/*.obj
