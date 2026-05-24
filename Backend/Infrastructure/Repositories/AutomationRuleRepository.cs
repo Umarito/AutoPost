@@ -59,12 +59,12 @@ public class AutomationRuleRepository(ApplicationDbContext db) : IAutomationRule
     /// <para><b>Business &amp; Technical Justification:</b>
     /// The critical webhook-processing path. Finds all active rules that can be triggered by an incoming event.</para>
     /// <para><b>Execution, Process &amp; Relationships:</b>
-    /// Runs a tracked query on AutomationRules matching SocialAccountId and IsEnabled = true, eagerly loading Conditions and Actions.</para>
+    /// Runs a read-only query with AsNoTracking on AutomationRules matching SocialAccountId and IsEnabled = true, eagerly loading Conditions and Actions.</para>
     /// <para><b>Project Impact &amp; Indispensability:</b>
     /// Performance-critical; matches the composite index (SocialAccountId, IsEnabled) in the database for sub-millisecond lookups.</para>
     /// </remarks>
     public async Task<IReadOnlyList<AutomationRule>> GetEnabledByAccountIdAsync(Guid socialAccountId, CancellationToken ct = default)
-        => await db.AutomationRules
+        => await db.AutomationRules.AsNoTracking()
             .Include(r => r.Conditions)
             .Include(r => r.Actions.OrderBy(a => a.ExecutionOrder))
             .Where(r => r.SocialAccountId == socialAccountId && r.IsEnabled)

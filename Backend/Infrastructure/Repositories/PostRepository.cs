@@ -13,11 +13,11 @@ public class PostRepository(ApplicationDbContext db) : IPostRepository
 {
     /// <inheritdoc />
     public Task<Post?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => db.Posts.FirstOrDefaultAsync(post => post.Id == id, ct);
+        => db.Posts.AsNoTracking().FirstOrDefaultAsync(post => post.Id == id, ct);
 
     /// <inheritdoc />
     public Task<Post?> GetByIdWithTargetsAsync(Guid id, CancellationToken ct = default)
-        => db.Posts
+        => db.Posts.AsNoTracking()
             .Include(post => post.Targets)
             .ThenInclude(target => target.SocialAccount)
             .Include(post => post.Video)
@@ -94,7 +94,7 @@ public class PostRepository(ApplicationDbContext db) : IPostRepository
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<Post>> GetScheduledPostsDueAsync(DateTime utcNow, CancellationToken ct = default)
-        => await db.Posts
+        => await db.Posts.AsNoTracking()
             .Include(post => post.Targets)
             .Where(post =>
                 post.Status == PostStatus.Scheduled &&

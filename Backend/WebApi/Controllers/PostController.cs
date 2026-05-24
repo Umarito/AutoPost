@@ -73,6 +73,7 @@ public sealed class PostController : ApiControllerBase
     /// <param name="request">Payload containing properties to update.</param>
     /// <param name="ct">Asynchronous cancellation token.</param>
     /// <returns>The updated post details representation.</returns>
+    [Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager}")]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PostDetailDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
@@ -121,6 +122,7 @@ public sealed class PostController : ApiControllerBase
     /// <param name="id">Post record identifier.</param>
     /// <param name="ct">Asynchronous cancellation token.</param>
     /// <returns>Action success response.</returns>
+    [Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager}")]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]

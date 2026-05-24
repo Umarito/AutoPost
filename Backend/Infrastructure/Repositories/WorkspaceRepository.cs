@@ -21,11 +21,11 @@ namespace Infrastructure.Repositories;
 public class WorkspaceRepository(ApplicationDbContext db) : IWorkspaceRepository
 {
     /// <summary>
-    /// Uses <c>FindAsync</c> which first checks the local identity map (in-memory cache of tracked entities)
-    /// before querying the database — optimal for single-entity lookups by primary key.
+    /// Uses <c>AsNoTracking</c> with <c>FirstOrDefaultAsync</c> for read-only lookups.
+    /// This avoids change tracking overhead when the entity is only being read.
     /// </summary>
     public async Task<Workspace?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await db.Workspaces.FindAsync([id], ct);
+        => await db.Workspaces.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id, ct);
 
     /// <summary>
     /// Queries by the unique Slug column using <c>FirstOrDefaultAsync</c>.

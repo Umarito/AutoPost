@@ -21,7 +21,7 @@ namespace WebApi.Controllers;
 /// <para><b>Execution, Process &amp; Relationships:</b> Invokes CQRS commands and queries via MediatR. Ensures actions align with the client session context provided by <see cref="ICurrentUserContext"/>.</para>
 /// <para><b>Project Impact &amp; Indispensability:</b> Prevents IDOR (Insecure Direct Object Reference) vectors by enforcing strict claims validation. Implements policy-based authorization limits.</para>
 /// </remarks>
-[Authorize]
+[Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager},{DefaultRoles.User}")]
 public sealed class WorkspaceController : ApiControllerBase
 {
     private readonly ICurrentUserContext _currentUserContext;

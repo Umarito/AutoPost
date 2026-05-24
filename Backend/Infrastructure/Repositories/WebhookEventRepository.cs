@@ -41,12 +41,12 @@ public class WebhookEventRepository(ApplicationDbContext db) : IWebhookEventRepo
     /// <para><b>Business &amp; Technical Justification:</b>
     /// Allows picking up a specific webhook event for processing or debugging.</para>
     /// <para><b>Execution, Process &amp; Relationships:</b>
-    /// Performs an EF Core lookup on WebhookEvents, returning a tracked instance.</para>
+    /// Performs an EF Core lookup with AsNoTracking for read-only access.</para>
     /// <para><b>Project Impact &amp; Indispensability:</b>
     /// Required for state transition checks during async processing runs.</para>
     /// </remarks>
     public Task<WebhookEvent?> GetByIdAsync(Guid webhookEventId, CancellationToken ct = default)
-        => db.WebhookEvents.FirstOrDefaultAsync(webhookEvent => webhookEvent.Id == webhookEventId, ct);
+        => db.WebhookEvents.AsNoTracking().FirstOrDefaultAsync(webhookEvent => webhookEvent.Id == webhookEventId, ct);
 
     /// <summary>
     /// Retrieves a batch of verified but unprocessed webhook events for background processing.
@@ -55,12 +55,12 @@ public class WebhookEventRepository(ApplicationDbContext db) : IWebhookEventRepo
     /// <para><b>Business &amp; Technical Justification:</b>
     /// Drives the background Hangfire parsing and processing job.</para>
     /// <para><b>Execution, Process &amp; Relationships:</b>
-    /// Queries verified events in Received status, sorted chronologically (FIFO), limited by batch size. Returns tracked results.</para>
+    /// Queries verified events in Received status with AsNoTracking, sorted chronologically (FIFO), limited by batch size.</para>
     /// <para><b>Project Impact &amp; Indispensability:</b>
     /// Eliminates concurrency conflicts by retrieving items sequentially in batches.</para>
     /// </remarks>
     public async Task<IReadOnlyList<WebhookEvent>> GetPendingAsync(int batchSize = 100, CancellationToken ct = default)
-        => await db.WebhookEvents
+        => await db.WebhookEvents.AsNoTracking()
             .Where(we => we.Status == WebhookEventStatus.Received && we.IsVerified)
             .OrderBy(we => we.ReceivedAt)
             .Take(batchSize)

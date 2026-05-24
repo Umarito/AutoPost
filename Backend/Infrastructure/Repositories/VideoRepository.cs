@@ -20,11 +20,11 @@ namespace Infrastructure.Repositories;
 public class VideoRepository(ApplicationDbContext db) : IVideoRepository
 {
     /// <summary>
-    /// Uses FindAsync for primary key lookup. The GlobalQueryFilter ensures soft-deleted
-    /// videos are excluded. Returns tracked entity for status/metadata updates.
+    /// Uses <c>AsNoTracking</c> with <c>FirstOrDefaultAsync</c> for read-only lookups.
+    /// The GlobalQueryFilter ensures soft-deleted videos are excluded.
     /// </summary>
     public async Task<Video?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await db.Videos.FindAsync([id], ct);
+        => await db.Videos.AsNoTracking().FirstOrDefaultAsync(v => v.Id == id, ct);
 
     /// <summary>
     /// Lists non-deleted videos for a workspace, ordered by upload date (newest first).
@@ -65,8 +65,10 @@ public class VideoRepository(ApplicationDbContext db) : IVideoRepository
     /// Uses <c>IgnoreQueryFilters()</c> to bypass the soft-delete GlobalQueryFilter.
     /// This is the ONLY method that can see deleted videos — used by the cleanup Hangfire job
     /// to find videos whose DeletedAt is past the retention period and delete them from Blob Storage.
+    /// Uses <c>AsNoTracking</c> to avoid change tracking overhead.
     /// </summary>
     public async Task<Video?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken ct = default)
         => await db.Videos.IgnoreQueryFilters()
+            .AsNoTracking()
             .FirstOrDefaultAsync(v => v.Id == id, ct);
 }

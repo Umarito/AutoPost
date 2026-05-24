@@ -12,13 +12,13 @@ public class RefreshTokenRepository(ApplicationDbContext db) : IRefreshTokenRepo
 {
     /// <inheritdoc />
     public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken ct = default)
-        => await db.RefreshTokens
+        => await db.RefreshTokens.AsNoTracking()
             .Include(rt => rt.User)
             .FirstOrDefaultAsync(rt => rt.TokenHash == tokenHash, ct);
 
     /// <inheritdoc />
     public async Task<RefreshToken?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await db.RefreshTokens
+        => await db.RefreshTokens.AsNoTracking()
             .Include(rt => rt.User)
             .FirstOrDefaultAsync(rt => rt.Id == id, ct);
 

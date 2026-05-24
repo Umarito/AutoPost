@@ -22,7 +22,7 @@ public class PostTargetRepository(ApplicationDbContext db) : IPostTargetReposito
     /// Loads a post target with its SocialAccount. Tracked for status/result updates.
     /// </summary>
     public async Task<PostTarget?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await db.PostTargets
+        => await db.PostTargets.AsNoTracking()
             .Include(pt => pt.SocialAccount)
             .FirstOrDefaultAsync(pt => pt.Id == id, ct);
 

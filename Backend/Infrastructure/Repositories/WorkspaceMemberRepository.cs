@@ -13,7 +13,7 @@ public class WorkspaceMemberRepository(ApplicationDbContext db) : IWorkspaceMemb
 {
     /// <inheritdoc />
     public async Task<WorkspaceMember?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await db.WorkspaceMembers
+        => await db.WorkspaceMembers.AsNoTracking()
             .Include(wm => wm.User)
             .FirstOrDefaultAsync(wm => wm.Id == id, ct);
 
@@ -39,13 +39,13 @@ public class WorkspaceMemberRepository(ApplicationDbContext db) : IWorkspaceMemb
 
     /// <inheritdoc />
     public async Task<WorkspaceMember?> GetByUserAndWorkspaceAsync(Guid userId, Guid workspaceId, CancellationToken ct = default)
-        => await db.WorkspaceMembers
+        => await db.WorkspaceMembers.AsNoTracking()
             .Include(wm => wm.User)
             .FirstOrDefaultAsync(wm => wm.UserId == userId && wm.WorkspaceId == workspaceId, ct);
 
     /// <inheritdoc />
     public async Task<WorkspaceMember?> GetByInvitedEmailAsync(Guid workspaceId, string invitedEmail, CancellationToken ct = default)
-        => await db.WorkspaceMembers
+        => await db.WorkspaceMembers.AsNoTracking()
             .Include(wm => wm.User)
             .FirstOrDefaultAsync(
                 wm => wm.WorkspaceId == workspaceId && wm.InvitedEmail == invitedEmail,

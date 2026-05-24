@@ -13,11 +13,11 @@ public class SocialAccountRepository(ApplicationDbContext db) : ISocialAccountRe
 {
     /// <inheritdoc />
     public Task<SocialAccount?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => db.SocialAccounts.FirstOrDefaultAsync(sa => sa.Id == id, ct);
+        => db.SocialAccounts.AsNoTracking().FirstOrDefaultAsync(sa => sa.Id == id, ct);
 
     /// <inheritdoc />
     public Task<SocialAccount?> GetByIdWithWorkspaceAsync(Guid id, CancellationToken ct = default)
-        => db.SocialAccounts
+        => db.SocialAccounts.AsNoTracking()
             .Include(sa => sa.Workspace)
             .FirstOrDefaultAsync(sa => sa.Id == id, ct);
 
@@ -31,7 +31,7 @@ public class SocialAccountRepository(ApplicationDbContext db) : ISocialAccountRe
 
     /// <inheritdoc />
     public Task<SocialAccount?> GetByExternalIdAsync(Guid workspaceId, Platform platform, string externalAccountId, CancellationToken ct = default)
-        => db.SocialAccounts
+        => db.SocialAccounts.AsNoTracking()
             .FirstOrDefaultAsync(
                 sa => sa.WorkspaceId == workspaceId &&
                       sa.Platform == platform &&

@@ -23,7 +23,7 @@ namespace WebApi.Controllers;
 /// <para><b>Execution, Process &amp; Relationships:</b> Directs streaming chunk buffers, launches background ffmpeg transcoding workers, and validates video dimensions and bitrates against platform rules.</para>
 /// <para><b>Project Impact &amp; Indispensability:</b> Employs zero-allocation streaming uploads. Strict IDOR rules isolate the media library per workspace to prevent cross-tenant media scraping.</para>
 /// </remarks>
-[Authorize]
+[Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager},{DefaultRoles.User}")]
 public sealed class VideoController : ApiControllerBase
 {
     /// <summary>
@@ -179,6 +179,7 @@ public sealed class VideoController : ApiControllerBase
     /// <param name="id">Video record identifier.</param>
     /// <param name="ct">Asynchronous cancellation token.</param>
     /// <returns>Action success response.</returns>
+    [Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager}")]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
@@ -226,6 +227,7 @@ public sealed class VideoController : ApiControllerBase
     /// <param name="metadata">Normalized video metadata details.</param>
     /// <param name="ct">Asynchronous cancellation token.</param>
     /// <returns>Action success response.</returns>
+    [Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager}")]
     [HttpPut("{id:guid}/metadata")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]

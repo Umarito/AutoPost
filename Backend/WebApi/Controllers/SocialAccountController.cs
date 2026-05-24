@@ -23,7 +23,7 @@ namespace WebApi.Controllers;
 /// <para><b>Execution, Process &amp; Relationships:</b> Coordinates oauth requests, callback data storage, and analytics fetches via MediatR queries, linking to third-party clients.</para>
 /// <para><b>Project Impact &amp; Indispensability:</b> Secures credential integration. Enforces CSRF matching on callbacks and validates tenant boundaries to prevent cross-account modifications.</para>
 /// </remarks>
-[Authorize]
+[Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager},{DefaultRoles.User}")]
 public sealed class SocialAccountController : ApiControllerBase
 {
     private readonly ICurrentUserContext _currentUserContext;

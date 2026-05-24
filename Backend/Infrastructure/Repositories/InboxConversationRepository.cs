@@ -227,7 +227,7 @@ public class InboxConversationRepository(ApplicationDbContext db) : IInboxConver
     /// Prevents creating duplicate threads for the same conversation when multiple webhooks arrive from the same user.</para>
     /// </remarks>
     public async Task<InboxConversation?> GetByExternalIdAsync(Guid socialAccountId, string externalConversationId, CancellationToken ct = default)
-        => await db.InboxConversations
+        => await db.InboxConversations.AsNoTracking()
             .Include(conversation => conversation.SocialAccount)
             .Include(conversation => conversation.Assignment)
             .FirstOrDefaultAsync(c =>
@@ -246,7 +246,7 @@ public class InboxConversationRepository(ApplicationDbContext db) : IInboxConver
     /// Allows mapping platform-specific users to threads when conversation IDs differ.</para>
     /// </remarks>
     public Task<InboxConversation?> GetByExternalUserIdAsync(Guid socialAccountId, string externalUserId, CancellationToken ct = default)
-        => db.InboxConversations
+        => db.InboxConversations.AsNoTracking()
             .Include(conversation => conversation.SocialAccount)
             .Include(conversation => conversation.Assignment)
             .FirstOrDefaultAsync(

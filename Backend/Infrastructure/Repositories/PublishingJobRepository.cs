@@ -22,7 +22,7 @@ public class PublishingJobRepository(ApplicationDbContext db) : IPublishingJobRe
     /// Loads one tracked publishing job for in-place mutation.
     /// </summary>
     public async Task<PublishingJob?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await db.PublishingJobs.FirstOrDefaultAsync(pj => pj.Id == id, ct);
+        => await db.PublishingJobs.AsNoTracking().FirstOrDefaultAsync(pj => pj.Id == id, ct);
 
     /// <summary>
     /// Adds the job to the change tracker. Called before making the platform API call.

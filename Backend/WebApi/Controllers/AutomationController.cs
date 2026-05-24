@@ -63,6 +63,7 @@ public sealed class AutomationController : ApiControllerBase
     /// <param name="request">Updated rule configuration properties.</param>
     /// <param name="ct">Asynchronous cancellation token.</param>
     /// <returns>The updated automation rule details.</returns>
+    [Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager}")]
     [HttpPut("rules/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AutomationRuleDetailDto))]
     [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
@@ -110,6 +111,7 @@ public sealed class AutomationController : ApiControllerBase
     /// <param name="id">Automation rule identifier.</param>
     /// <param name="ct">Asynchronous cancellation token.</param>
     /// <returns>Action success response.</returns>
+    [Authorize(Roles = $"{DefaultRoles.Administrator},{DefaultRoles.Manager}")]
     [HttpDelete("rules/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
