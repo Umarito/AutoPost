@@ -30,17 +30,27 @@ internal static class TestEntityFactory
         string email = "test@autopost.com",
         bool isActive = true)
     {
-        var user = new ApplicationUser
-        {
-            Id = id ?? Guid.NewGuid(),
-            Email = email,
-            NormalizedEmail = email.ToUpperInvariant(),
-            UserName = email,
-            NormalizedUserName = email.ToUpperInvariant(),
-            SecurityStamp = Guid.NewGuid().ToString()
-        };
+        // Use the domain factory method to ensure IsActive, DisplayName and other
+        // private-set properties are correctly initialised via the DDD encapsulation path.
+        var user = ApplicationUser.Create(email, displayName, DateTime.UtcNow);
 
-        // Set private-set properties via EF Core's entry tracker in context
+        // Override the auto-generated Id when callers supply one.
+        if (id.HasValue)
+        {
+            user.Id = id.Value;
+        }
+
+        // Identity-managed fields needed by UserManager mock setups.
+        user.NormalizedEmail = email.ToUpperInvariant();
+        user.NormalizedUserName = email.ToUpperInvariant();
+        user.SecurityStamp = Guid.NewGuid().ToString();
+
+        // Support deactivation scenarios in tests.
+        if (!isActive)
+        {
+            user.Deactivate();
+        }
+
         return user;
     }
 

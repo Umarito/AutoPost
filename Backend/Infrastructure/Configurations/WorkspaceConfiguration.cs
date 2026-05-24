@@ -7,9 +7,18 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Infrastructure.Configurations;
 
 /// <summary>
-/// EF Core Fluent API configuration for the Workspace entity.
-/// Workspace is the Aggregate Root and tenant boundary — all data isolation in the system is based on WorkspaceId.
+/// EF Core Fluent API configuration for the <see cref="Workspace"/> entity.
 /// </summary>
+/// <remarks>
+/// <para><b>Core Definition:</b> Configures schema mappings and relationships for workspaces, acting as the multi-tenancy partition boundary.</para>
+/// <para><b>Business Justification:</b> Workspace is the Aggregate Root and tenant boundary — all data isolation in the system is based on WorkspaceId.
+/// TRD: "All data belongs to Workspace, not directly to the user. Max limits for accounts/members are enforced at the workspace level."</para>
+/// <para><b>Execution and Project Impact:</b> Crucial for security and system architecture. Configures cascade behaviors.
+/// <br/><i>Caution on Deletion:</i> Deleting a Workspace triggers cascade deletes on WorkspaceMembers, Posts, AutomationRules, and SocialAccounts.
+/// However, if a SocialAccount has active conversations (InboxConversations), database-level <c>Restrict</c> rules on SocialAccount-to-Conversation relations
+/// will block the delete operation, throwing a runtime exception. This is <b>intentional by design</b> (Not a Bug) to prevent accidental loss
+/// of critical business conversational data without manual review/cleanup.</para>
+/// </remarks>
 public class WorkspaceConfiguration : IEntityTypeConfiguration<Workspace>
 {
     public void Configure(EntityTypeBuilder<Workspace> builder)
@@ -76,7 +85,7 @@ public class WorkspaceConfiguration : IEntityTypeConfiguration<Workspace>
         // ── Relationships ───────────────────────────────────────────────────
 
         // One Workspace → Many WorkspaceMembers.
-        // TRD: "All data belongs to Workspace, not directly to the user."
+        // Cascade: deleting a workspace removes all its memberships and invitations.
         builder.HasMany(w => w.Members)
             .WithOne(m => m.Workspace)
             .HasForeignKey(m => m.WorkspaceId)
@@ -84,7 +93,8 @@ public class WorkspaceConfiguration : IEntityTypeConfiguration<Workspace>
             .OnDelete(DeleteBehavior.Cascade);
 
         // One Workspace → Many SocialAccounts.
-        // TRD: "Connected external accounts belong to a Workspace."
+        // Cascade: deleting a workspace removes connected platform accounts.
+        // Note: Blocked at database level if any SocialAccount has related InboxConversations due to Restrict rules on SocialAccount.
         builder.HasMany(w => w.SocialAccounts)
             .WithOne(sa => sa.Workspace)
             .HasForeignKey(sa => sa.WorkspaceId)
@@ -92,7 +102,7 @@ public class WorkspaceConfiguration : IEntityTypeConfiguration<Workspace>
             .OnDelete(DeleteBehavior.Cascade);
 
         // One Workspace → Many Posts.
-        // TRD: "Posts are created within a Workspace context."
+        // Cascade: deleting a workspace purges all posts and media within it.
         builder.HasMany(w => w.Posts)
             .WithOne(p => p.Workspace)
             .HasForeignKey(p => p.WorkspaceId)
@@ -100,7 +110,7 @@ public class WorkspaceConfiguration : IEntityTypeConfiguration<Workspace>
             .OnDelete(DeleteBehavior.Cascade);
 
         // One Workspace → Many AutomationRules.
-        // TRD: "Automation rules operate within Workspace boundaries."
+        // Cascade: deleting a workspace purges all automation rules and configurations.
         builder.HasMany(w => w.AutomationRules)
             .WithOne(ar => ar.Workspace)
             .HasForeignKey(ar => ar.WorkspaceId)
@@ -108,3 +118,4 @@ public class WorkspaceConfiguration : IEntityTypeConfiguration<Workspace>
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+

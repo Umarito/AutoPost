@@ -211,7 +211,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IBackgroundJobScheduler, HangfireBackgroundJobScheduler>();
-        services.AddSingleton<IRecurringJobRegistrar, InfrastructureRecurringJobRegistrar>();
+        services.AddScoped<IRecurringJobRegistrar, InfrastructureRecurringJobRegistrar>();
         services.AddScoped<InfrastructureHeartbeatJob>();
         services.AddScoped<SendEmailJob>();
         services.AddScoped<SendPushNotificationJob>();

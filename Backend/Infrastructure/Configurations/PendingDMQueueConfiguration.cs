@@ -6,49 +6,60 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Infrastructure.Configurations;
 
 /// <summary>
-/// EF Core Fluent API configuration for the PendingDMQueue entity.
-/// Key entity for handling private accounts — DMs are queued when direct sending is impossible.
-/// TRD: "Hangfire job every 30 min checks Waiting entries; ExpiresAt default = TriggeredAt + 7 days."
+/// EF Core Fluent API configuration for the <see cref="PendingDMQueue"/> entity.
 /// </summary>
+/// <remarks>
+/// <para><b>Core Definition:</b> Configures the relational mappings for the Direct Message queue.</para>
+/// <para><b>Business Justification:</b> Key entity for handling private accounts — DMs are queued when direct sending is impossible.
+/// TRD: "Hangfire job every 30 min checks Waiting entries; ExpiresAt default = TriggeredAt + 7 days."</para>
+/// <para><b>Execution and Project Impact:</b> Essential for messaging reliability. Includes crucial indexes for the background polling job to avoid database table scans.</para>
+/// </remarks>
 public class PendingDMQueueConfiguration : IEntityTypeConfiguration<PendingDMQueue>
 {
     public void Configure(EntityTypeBuilder<PendingDMQueue> builder)
     {
+        // Table Name mapping
         builder.ToTable("PendingDMQueue");
+
+        // Primary Key definition
         builder.HasKey(q => q.Id);
 
+        // Foreign Key IDs
         builder.Property(q => q.AutomationRuleId).IsRequired();
         builder.Property(q => q.SocialAccountId).IsRequired();
 
-        // External user ID to whom the DM needs to be sent.
+        // External platform user identifier
         builder.Property(q => q.ExternalUserId)
             .IsRequired()
             .HasMaxLength(500);
 
+        // Cached username of the recipient
         builder.Property(q => q.ExternalUserName).HasMaxLength(500);
 
-        // Final message text with variables already substituted at trigger time, not at send time.
+        // Pre-resolved message content with tokens substituted
         builder.Property(q => q.ResolvedMessageText)
             .IsRequired()
             .HasMaxLength(4000);
 
-        // Reason why DM was not sent immediately: TargetAccountIsPrivate, ApiRateLimitReached, DMsDisabledByUser.
+        // Failure reason categorization
         builder.Property(q => q.Reason)
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(50);
 
+        // Temporal tracking
         builder.Property(q => q.TriggeredAt).IsRequired();
         builder.Property(q => q.LastCheckedAt);
 
+        // Retry and rate-limiting limits
         builder.Property(q => q.CheckAttemptCount)
             .IsRequired()
             .HasDefaultValue(0);
 
-        // Expiration — TRD: "Default: TriggeredAt + 7 days."
+        // Expiration threshold
         builder.Property(q => q.ExpiresAt).IsRequired();
 
-        // Queue status: Waiting, Sent, Expired, Cancelled.
+        // Queue state machine representation
         builder.Property(q => q.Status)
             .IsRequired()
             .HasConversion<string>()
@@ -56,26 +67,29 @@ public class PendingDMQueueConfiguration : IEntityTypeConfiguration<PendingDMQue
 
         // ── Indexes ─────────────────────────────────────────────────────────
 
-        // Critical index for Hangfire polling job: finds all Waiting entries that haven't expired.
+        // Composite index for background Hangfire polling job: filters for active "Waiting" messages.
         // TRD: "Hangfire job every 30 min: scan Waiting entries."
         builder.HasIndex(q => new { q.Status, q.ExpiresAt })
             .HasDatabaseName("IX_PendingDMQueue_Status_ExpiresAt");
 
+        // Foreign Key Index for SocialAccountId relationship queries
         builder.HasIndex(q => q.SocialAccountId)
             .HasDatabaseName("IX_PendingDMQueue_SocialAccountId");
 
+        // Foreign Key Index for AutomationRuleId relationship queries (Search & Destroy: prevent full table scan on rule updates)
+        builder.HasIndex(q => q.AutomationRuleId)
+            .HasDatabaseName("IX_PendingDMQueue_AutomationRuleId");
+
         // ── Relationships ───────────────────────────────────────────────────
 
-        // Many Queue entries → One AutomationRule.
-        // Restrict: cannot delete rule with pending DMs — must handle them first.
+        // AutomationRule Relationship: Restrict deletion of rules linked to pending messages
         builder.HasOne(q => q.AutomationRule)
             .WithMany()
             .HasForeignKey(q => q.AutomationRuleId)
             .HasConstraintName("FK_PendingDMQueue_AutomationRules_AutomationRuleId")
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Many Queue entries → One SocialAccount.
-        // Restrict: cannot disconnect account with pending DMs.
+        // SocialAccount Relationship: Restrict disconnection of accounts with pending messages
         builder.HasOne(q => q.SocialAccount)
             .WithMany()
             .HasForeignKey(q => q.SocialAccountId)
@@ -83,3 +97,4 @@ public class PendingDMQueueConfiguration : IEntityTypeConfiguration<PendingDMQue
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+

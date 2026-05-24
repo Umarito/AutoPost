@@ -69,12 +69,19 @@ public sealed class DefaultWebhookPayloadParser : IWebhookPayloadParser
     }
 
     private static string? TryReadString(JsonElement root, string propertyName)
-        => root.TryGetProperty(propertyName, out var property) && property.ValueKind switch
+    {
+        if (!root.TryGetProperty(propertyName, out var property))
+        {
+            return null;
+        }
+
+        return property.ValueKind switch
         {
             JsonValueKind.String => property.GetString(),
             JsonValueKind.Number => property.GetRawText(),
             _ => null
         };
+    }
 
     private static Guid? TryReadGuid(JsonElement root, string propertyName)
         => root.TryGetProperty(propertyName, out var property) &&
@@ -84,12 +91,19 @@ public sealed class DefaultWebhookPayloadParser : IWebhookPayloadParser
             : null;
 
     private static bool? TryReadBool(JsonElement root, string propertyName)
-        => root.TryGetProperty(propertyName, out var property) && property.ValueKind switch
+    {
+        if (!root.TryGetProperty(propertyName, out var property))
         {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            _ => null
+            return null;
+        }
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.True => (bool?)true,
+            JsonValueKind.False => (bool?)false,
+            _ => (bool?)null
         };
+    }
 
     private static DateTime? TryReadDateTime(JsonElement root, string propertyName)
         => root.TryGetProperty(propertyName, out var property) &&

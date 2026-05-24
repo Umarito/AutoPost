@@ -6,15 +6,22 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Infrastructure.Configurations;
 
 /// <summary>
-/// EF Core Fluent API configuration for the WebhookEvent entity.
-/// Infrastructure entity — buffer for incoming webhook events from social platforms.
-/// TRD: "Critical rule: respond 200 OK within 200ms. Save RawPayload immediately, process in background."
+/// EF Core Fluent API configuration for the <see cref="WebhookEvent"/> entity.
 /// </summary>
+/// <remarks>
+/// <para><b>Core Definition:</b> Configures the database schema mappings for incoming webhooks.</para>
+/// <para><b>Business Justification:</b> Buffer for incoming webhook events from social platforms. 
+/// TRD: "Critical rule: respond 200 OK within 200ms. Save RawPayload immediately, process in background."</para>
+/// <para><b>Execution and Project Impact:</b> Essential for system resilience. Allows reprocessing events if background operations fail.</para>
+/// </remarks>
 public class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
 {
     public void Configure(EntityTypeBuilder<WebhookEvent> builder)
     {
+        // Table Name mapping
         builder.ToTable("WebhookEvents");
+
+        // Primary Key definition
         builder.HasKey(we => we.Id);
 
         // Platform source of the event.
@@ -30,8 +37,12 @@ public class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
 
         // Raw JSON payload — saved immediately before any processing.
         // TRD: "Allows re-processing the event on failure."
+        // We explicitly use the PostgreSQL "text" column type (unbounded length) because webhook payloads from 
+        // social platforms (e.g., Meta/Instagram) can be very large (exceeding 100KB+) and highly unpredictable. 
+        // Applying a strict max length would risk failing to store valid webhooks, which violates reliability standards.
         builder.Property(we => we.RawPayload)
-            .IsRequired();
+            .IsRequired()
+            .HasColumnType("text");
 
         // Cryptographic signature for verification (X-Hub-Signature-256).
         builder.Property(we => we.Signature).HasMaxLength(500);
@@ -42,6 +53,7 @@ public class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
             .IsRequired()
             .HasDefaultValue(false);
 
+        // Temporal tracking
         builder.Property(we => we.ReceivedAt).IsRequired();
 
         // Processing status: Received, Processing, Processed, Failed, Ignored.
@@ -55,8 +67,10 @@ public class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
             .IsRequired()
             .HasDefaultValue(0);
 
+        // Temporal processing markers
         builder.Property(we => we.ProcessedAt);
 
+        // Fail/Error logs
         builder.Property(we => we.ProcessingError).HasMaxLength(4000);
 
         // ── Indexes ─────────────────────────────────────────────────────────
@@ -74,3 +88,4 @@ public class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
         // No navigation properties — this is an infrastructure entity isolated from the domain per TRD.
     }
 }
+

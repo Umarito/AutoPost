@@ -6,10 +6,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Infrastructure.Configurations;
 
 /// <summary>
-/// EF Core Fluent API configuration for the SocialAccount entity.
-/// SocialAccount is the bridge between the system and external platforms (YouTube, Instagram, TikTok, etc.).
-/// TRD: "OAuth tokens are stored ENCRYPTED via IDataProtectionProvider. Plaintext NEVER reaches DB, logs, or API responses."
+/// EF Core Fluent API configuration for the <see cref="SocialAccount"/> entity.
 /// </summary>
+/// <remarks>
+/// <para><b>Core Definition:</b> Configures schema mappings for connected social platform accounts.</para>
+/// <para><b>Business Justification:</b> Bridges the system with external platforms (YouTube, Instagram, TikTok, etc.).
+/// TRD: "OAuth tokens are stored ENCRYPTED via IDataProtectionProvider. Plaintext NEVER reaches DB, logs, or API responses."</para>
+/// <para><b>Execution and Project Impact:</b> Essential for core system functionality. Handles token encryption safeguards, platform type constraints, and indexes to support OAuth token refresh loops.</para>
+/// </remarks>
 public class SocialAccountConfiguration : IEntityTypeConfiguration<SocialAccount>
 {
     public void Configure(EntityTypeBuilder<SocialAccount> builder)
@@ -99,8 +103,10 @@ public class SocialAccountConfiguration : IEntityTypeConfiguration<SocialAccount
 
         // ── Ignored Properties ──────────────────────────────────────────────
 
-        // LatestInsight is a computed navigation — not persisted as a column.
-        // It is resolved at query time by fetching the most recent SocialAccountInsight.
+        // LatestInsight is a computed navigation property and must not be persisted as a database column.
+        // Omission Reason: It represents a dynamic context (the most recent SocialAccountInsight snapshot),
+        // which changes over time and is resolved efficiently at query time using LINQ projections rather than 
+        // storing a physical, redundantly managed foreign key column pointing to the insights table.
         builder.Ignore(sa => sa.LatestInsight);
 
         // ── Indexes ─────────────────────────────────────────────────────────
@@ -125,3 +131,4 @@ public class SocialAccountConfiguration : IEntityTypeConfiguration<SocialAccount
         // from their respective entity configuration classes.
     }
 }
+

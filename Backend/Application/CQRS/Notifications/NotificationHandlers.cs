@@ -1,5 +1,6 @@
 using Application.Abstractions.Caching;
 using Application.Abstractions.Notifications;
+using Application.Abstractions.Persistence;
 using Application.Abstractions.Repositories;
 using Application.Common;
 using Application.Common.Guards;

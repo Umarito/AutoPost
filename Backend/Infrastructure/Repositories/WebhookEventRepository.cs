@@ -7,40 +7,58 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.Repositories;
 
 /// <summary>
-/// EF Core implementation of <see cref="IWebhookEventRepository"/>.
-///
-/// <para><b>How it works:</b>
-/// The webhook controller calls <c>AddAsync</c> to save the raw payload as fast as possible,
-/// then responds 200 OK. A background Hangfire job calls <c>GetPendingAsync</c> to pick up
-/// verified events in FIFO order and process them (parse, match rules, execute actions).</para>
-///
-/// <para><b>Purpose:</b>
-/// Implements the "save immediately, process later" pattern that ensures webhook endpoints
-/// respond within the platform's timeout window (typically 200ms).</para>
+/// EF Core implementation of <see cref="IWebhookEventRepository"/> targeting the WebhookEvents table.
 /// </summary>
+/// <remarks>
+/// <para><b>How it works:</b>
+/// Interacts with <see cref="ApplicationDbContext"/> to write and read webhook event records, using `.AsNoTracking()` for read queries and change tracking for modifications.</para>
+/// <para><b>Purpose:</b>
+/// Provides the data-access operations required for ingestion and background processing of social platform events.</para>
+/// </remarks>
 public class WebhookEventRepository(ApplicationDbContext db) : IWebhookEventRepository
 {
     /// <summary>
-    /// Adds the event to the change tracker for immediate persistence.
-    /// This must be followed by SaveChangesAsync before returning the 200 OK response.
+    /// Persists a new webhook event immediately on arrival.
     /// </summary>
+    /// <remarks>
+    /// <para><b>Business &amp; Technical Justification:</b>
+    /// Saves raw payload as fast as possible to unblock the webhook receiver endpoint.</para>
+    /// <para><b>Execution, Process &amp; Relationships:</b>
+    /// Adds a new <see cref="WebhookEvent"/> record to the change tracker in the Added state.</para>
+    /// <para><b>Project Impact &amp; Indispensability:</b>
+    /// Necessary for the 200ms quick-respond-first pattern.</para>
+    /// </remarks>
     public async Task<WebhookEvent> AddAsync(WebhookEvent webhookEvent, CancellationToken ct = default)
     {
         await db.WebhookEvents.AddAsync(webhookEvent, ct);
         return webhookEvent;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Retrieves one tracked webhook event by its identifier.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Business &amp; Technical Justification:</b>
+    /// Allows picking up a specific webhook event for processing or debugging.</para>
+    /// <para><b>Execution, Process &amp; Relationships:</b>
+    /// Performs an EF Core lookup on WebhookEvents, returning a tracked instance.</para>
+    /// <para><b>Project Impact &amp; Indispensability:</b>
+    /// Required for state transition checks during async processing runs.</para>
+    /// </remarks>
     public Task<WebhookEvent?> GetByIdAsync(Guid webhookEventId, CancellationToken ct = default)
         => db.WebhookEvents.FirstOrDefaultAsync(webhookEvent => webhookEvent.Id == webhookEventId, ct);
 
     /// <summary>
-    /// Retrieves a batch of verified, unprocessed events in FIFO order.
-    /// Only returns events where Status == Received AND IsVerified == true
-    /// (events that failed HMAC-SHA256 verification are excluded).
-    /// Tracked — the processor updates Status to Processing, then Processed or Failed.
-    /// Hits the composite index (Status, ReceivedAt) for efficient batch retrieval.
+    /// Retrieves a batch of verified but unprocessed webhook events for background processing.
     /// </summary>
+    /// <remarks>
+    /// <para><b>Business &amp; Technical Justification:</b>
+    /// Drives the background Hangfire parsing and processing job.</para>
+    /// <para><b>Execution, Process &amp; Relationships:</b>
+    /// Queries verified events in Received status, sorted chronologically (FIFO), limited by batch size. Returns tracked results.</para>
+    /// <para><b>Project Impact &amp; Indispensability:</b>
+    /// Eliminates concurrency conflicts by retrieving items sequentially in batches.</para>
+    /// </remarks>
     public async Task<IReadOnlyList<WebhookEvent>> GetPendingAsync(int batchSize = 100, CancellationToken ct = default)
         => await db.WebhookEvents
             .Where(we => we.Status == WebhookEventStatus.Received && we.IsVerified)
@@ -48,7 +66,17 @@ public class WebhookEventRepository(ApplicationDbContext db) : IWebhookEventRepo
             .Take(batchSize)
             .ToListAsync(ct);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Retrieves one filtered page of webhook events for monitoring and replay tooling.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Business &amp; Technical Justification:</b>
+    /// Drives webhook execution logs screens for developers and workspace admins.</para>
+    /// <para><b>Execution, Process &amp; Relationships:</b>
+    /// Uses AsNoTracking. Applies status, platform, and date filters, sorting newest first with Skip/Take paging.</para>
+    /// <para><b>Project Impact &amp; Indispensability:</b>
+    /// Crucial for operational monitoring and debug analysis of integrations.</para>
+    /// </remarks>
     public async Task<IReadOnlyList<WebhookEvent>> GetFilteredAsync(
         WebhookEventStatus? status,
         Platform? platform,
@@ -65,7 +93,17 @@ public class WebhookEventRepository(ApplicationDbContext db) : IWebhookEventRepo
             .ToListAsync(ct);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Counts filtered webhook events for paged operational screens.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Business &amp; Technical Justification:</b>
+    /// Displays page boundaries inside the system monitoring dashboard.</para>
+    /// <para><b>Execution, Process &amp; Relationships:</b>
+    /// Performs a SQL COUNT query using filters from <see cref="GetFilteredAsync"/>.</para>
+    /// <para><b>Project Impact &amp; Indispensability:</b>
+    /// Provides paging controls with efficient database execution.</para>
+    /// </remarks>
     public Task<int> CountFilteredAsync(
         WebhookEventStatus? status,
         Platform? platform,
@@ -74,8 +112,16 @@ public class WebhookEventRepository(ApplicationDbContext db) : IWebhookEventRepo
         => BuildFilteredQuery(status, platform, from).CountAsync(ct);
 
     /// <summary>
-    /// Marks the event as Modified for status transitions and error recording.
+    /// Marks a webhook event as modified.
     /// </summary>
+    /// <remarks>
+    /// <para><b>Business &amp; Technical Justification:</b>
+    /// Required when updating event status (Received -> Processing -> Processed/Failed).</para>
+    /// <para><b>Execution, Process &amp; Relationships:</b>
+    /// Marks the entity state as Modified in the change tracker.</para>
+    /// <para><b>Project Impact &amp; Indispensability:</b>
+    /// Ensures status updates are saved to database after processing completes.</para>
+    /// </remarks>
     public void Update(WebhookEvent webhookEvent)
         => db.WebhookEvents.Update(webhookEvent);
 

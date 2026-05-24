@@ -1,9 +1,12 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Application.BackgroundJobs;
 using Application.Behaviors;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+
+[assembly: InternalsVisibleTo("Tests")]
 
 namespace Application;
 
