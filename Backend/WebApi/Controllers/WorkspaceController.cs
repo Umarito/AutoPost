@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using WebApi.Seeds;
 
 namespace WebApi.Controllers;
 
