@@ -16,6 +16,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using WebApi.ExceptionHandling;
 using WebApi.Hubs;
 using WebApi.Middleware;
@@ -283,7 +284,7 @@ public static class DependencyInjection
                 Description = "Multi-platform social publishing and automation API."
             });
 
-            var bearerScheme = new OpenApiSecurityScheme
+            var bearerScheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
             {
                 Name = "Authorization",
                 In = ParameterLocation.Header,
@@ -295,10 +296,17 @@ public static class DependencyInjection
 
             options.AddSecurityDefinition("Bearer", bearerScheme);
 
-            options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
                 {
-                    new OpenApiSecuritySchemeReference("Bearer"),
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
                     new List<string>()
                 }
             });
